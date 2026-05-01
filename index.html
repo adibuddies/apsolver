@@ -9,11 +9,8 @@
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; padding: 40px; color: #1a1a1a; }
         .container { max-width: 800px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
         h1 { color: #c5a059; text-align: center; }
-        
-        /* New Styles for Mode Selector */
         .mode-selector { margin-bottom: 25px; }
         select { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #e0e0e0; border-radius: 4px; outline: none; background: #fafcfc; }
-        
         .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .input-group { display: flex; flex-direction: column; }
         label { font-size: 11px; font-weight: bold; text-transform: uppercase; color: #5f6368; margin-bottom: 5px; letter-spacing: 1px; }
@@ -24,7 +21,7 @@
         .results { margin-top: 20px; padding: 20px; background: #ecfdf5; border-left: 4px solid #10b981; display: none; }
         canvas { margin-top: 30px; }
         
-        /* Hide secondary modes by default */
+        /* Hidden by default */
         #mode-twoterms { display: none; } 
     </style>
 </head>
@@ -33,12 +30,13 @@
 <div class="container">
     <h1>IntelliMAP Engine</h1>
     
-    <!-- The New Mode Selector -->
     <div class="mode-selector">
         <label>Select Problem Archetype</label>
         <select id="problemMode" onchange="switchMode()">
-            <option value="basic">Standard (Given basic variables a, d, n)</option>
+            <option value="basic">Standard (Given basic variables a, d, n, etc.)</option>
             <option value="two_terms">Systems of Equations (Given two specific terms)</option>
+            <option value="three_terms">Symmetric Selection (Sum & Product of 3 Terms)</option>
+            <option value="divisibility">Word Problems (Divisibility & Ranges)</option>
         </select>
     </div>
 
@@ -51,7 +49,7 @@
         <div class="input-group"><label>Sum (S_n)</label><input type="number" id="val_sn" step="any"></div>
     </div>
 
-    <!-- MODE 2: TWO TERMS (UI Skeleton for next commit) -->
+    <!-- MODE 2: TWO TERMS -->
     <div id="mode-twoterms">
         <p style="font-size: 13px; color: #5f6368; margin-top: 0;">Example: "If the 6th term is 19..." -> Position 1 = 6, Value 1 = 19</p>
         <div class="input-grid">
@@ -59,14 +57,35 @@
             <div class="input-group"><label>Value 1 (v₁)</label><input type="number" id="val_v1" step="any"></div>
             <div class="input-group"><label>Position 2 (n₂)</label><input type="number" id="val_n2"></div>
             <div class="input-group"><label>Value 2 (v₂)</label><input type="number" id="val_v2" step="any"></div>
-            <div class="input-group"><label>Target Term (n)</label><input type="number" id="val_target_n" placeholder="e.g., 40"></div>
+            <div class="input-group"><label>Target Term (n) (Optional)</label><input type="number" id="val_target_n" placeholder="e.g., Find 40th term"></div>
+        </div>
+    </div>
+
+    <!-- MODE 3: THREE TERMS (SUM & PRODUCT) -->
+    <div id="mode-threeterms" style="display: none;">
+        <p style="font-size: 13px; color: #5f6368; margin-top: 0;">Example: "Three numbers in AP sum to 27, product is 648"</p>
+        <div class="input-grid">
+            <div class="input-group"><label>Sum of 3 Terms</label><input type="number" id="val_sum3" step="any"></div>
+            <div class="input-group"><label>Product of 3 Terms</label><input type="number" id="val_prod3" step="any"></div>
+            <div class="input-group"><label>Generate up to 'n' terms</label><input type="number" id="val_target_n3" value="3" placeholder="Default: 3"></div>
+        </div>
+    </div>
+
+    <!-- MODE 4: DIVISIBILITY & RANGES -->
+    <div id="mode-divisibility" style="display: none;">
+        <p style="font-size: 13px; color: #5f6368; margin-top: 0;">Example: "How many 3-digit numbers are divisible by 7?" (Start: 100, End: 999, Divisor: 7)</p>
+        <div class="input-grid">
+            <div class="input-group"><label>Start Range</label><input type="number" id="val_rstart"></div>
+            <div class="input-group"><label>End Range</label><input type="number" id="val_rend"></div>
+            <div class="input-group"><label>Divisible By</label><input type="number" id="val_div"></div>
+            <div class="input-group"><label>Leaves Remainder (Opt)</label><input type="number" id="val_rem" placeholder="0"></div>
         </div>
     </div>
 
     <button onclick="calculateAP()">Solve & Plot</button>
 
     <div class="results" id="resultsBox">
-        <h3 style="margin-top: 0; color: #065f46;">Derived Values:</h3>
+        <h3 style="margin-top: 0; color: #065f46;">Extracted Constants:</h3>
         <p id="resultText" style="font-size: 16px; line-height: 1.6;"></p>
     </div>
 
@@ -76,18 +95,18 @@
 <script>
     let apChartInstance = null;
 
-    // New function to toggle UI based on dropdown
     function switchMode() {
         const mode = document.getElementById('problemMode').value;
         document.getElementById('mode-basic').style.display = (mode === 'basic') ? 'grid' : 'none';
         document.getElementById('mode-twoterms').style.display = (mode === 'two_terms') ? 'block' : 'none';
+        document.getElementById('mode-threeterms').style.display = (mode === 'three_terms') ? 'block' : 'none';
+        document.getElementById('mode-divisibility').style.display = (mode === 'divisibility') ? 'grid' : 'none';
     }
 
     async function calculateAP() {
         const mode = document.getElementById('problemMode').value;
         let data = { mode: mode };
 
-        // Only gather data for the active mode
         if (mode === 'basic') {
             data.a = document.getElementById('val_a').value;
             data.d = document.getElementById('val_d').value;
@@ -100,7 +119,15 @@
             data.n2 = document.getElementById('val_n2').value;
             data.v2 = document.getElementById('val_v2').value;
             data.target_n = document.getElementById('val_target_n').value;
-            return;
+        } else if (mode === 'three_terms') {
+            data.sum_3 = document.getElementById('val_sum3').value;
+            data.prod_3 = document.getElementById('val_prod3').value;
+            data.target_n = document.getElementById('val_target_n3').value;
+        } else if (mode === 'divisibility') {
+            data.r_start = document.getElementById('val_rstart').value;
+            data.r_end = document.getElementById('val_rend').value;
+            data.divisor = document.getElementById('val_div').value;
+            data.remainder = document.getElementById('val_rem').value;
         }
 
         const response = await fetch('/calculate', {
@@ -117,10 +144,10 @@
 
         document.getElementById('resultsBox').style.display = 'block';
         document.getElementById('resultText').innerHTML = `
-            <strong>a:</strong> ${result.a} &nbsp;|&nbsp; 
-            <strong>d:</strong> ${result.d} &nbsp;|&nbsp; 
-            <strong>n:</strong> ${result.n} &nbsp;|&nbsp; 
-            <strong>a<sub>${result.n}</sub>:</strong> ${result.an} &nbsp;|&nbsp; 
+            <strong>First Term (a):</strong> ${result.a} <br>
+            <strong>Common Diff (d):</strong> ${result.d} <br>
+            <strong>Target (n):</strong> ${result.n} <br>
+            <strong>a<sub>${result.n}</sub>:</strong> ${result.an} <br>
             <strong>S<sub>${result.n}</sub>:</strong> ${result.sn}
         `;
 
