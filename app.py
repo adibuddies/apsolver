@@ -112,7 +112,7 @@ def solve_ap(data):
 # [Keep your index and calculate routes here]
 @app.route("/")
 def index():
-    return render_template("index4.html")
+    return render_template("index.html")
 
 @app.route("/calculate", methods=["POST"])
 def calculate():
