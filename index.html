@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IntelliMAP | AP Calculator</title>
+    <!-- Bring in Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; padding: 40px; color: #1a1a1a; }
         .container { max-width: 800px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
@@ -15,12 +17,17 @@
         input:focus { border-color: #c5a059; }
         button { width: 100%; padding: 15px; background: #1a1a1a; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 14px; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; }
         button:hover { background: #c5a059; }
+        
+        /* New Styles for Results & Chart */
+        .results { margin-top: 20px; padding: 20px; background: #ecfdf5; border-left: 4px solid #10b981; display: none; }
+        canvas { margin-top: 30px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>IntelliMAP Engine</h1>
+    <p style="text-align: center; color: #5f6368; font-size: 14px; margin-bottom: 25px;">Leave unknown fields blank. Provide at least 3 values.</p>
     
     <div id="mode-basic" class="input-grid">
         <div class="input-group"><label>First Term (a)</label><input type="number" id="val_a" step="any"></div>
@@ -30,8 +37,76 @@
         <div class="input-group"><label>Sum (S_n)</label><input type="number" id="val_sn" step="any"></div>
     </div>
 
-    <button>Solve & Plot</button>
+    <button onclick="calculateAP()">Solve & Plot</button>
+
+    <!-- Results Box -->
+    <div class="results" id="resultsBox">
+        <h3 style="margin-top: 0; color: #065f46;">Derived Values:</h3>
+        <p id="resultText" style="font-size: 16px; line-height: 1.6;"></p>
+    </div>
+
+    <!-- Graph Canvas -->
+    <canvas id="apChart"></canvas>
 </div>
+
+<!-- JavaScript Logic -->
+<script>
+    let apChartInstance = null;
+
+    async function calculateAP() {
+        const data = {
+            a: document.getElementById('val_a').value,
+            d: document.getElementById('val_d').value,
+            n: document.getElementById('val_n').value,
+            an: document.getElementById('val_an').value,
+            sn: document.getElementById('val_sn').value
+        };
+
+        const response = await fetch('/calculate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+
+        if (result.error) {
+            alert(result.error);
+            return;
+        }
+
+        // Display text results
+        document.getElementById('resultsBox').style.display = 'block';
+        document.getElementById('resultText').innerHTML = `
+            <strong>a:</strong> ${result.a} &nbsp;|&nbsp; 
+            <strong>d:</strong> ${result.d} &nbsp;|&nbsp; 
+            <strong>n:</strong> ${result.n} &nbsp;|&nbsp; 
+            <strong>a<sub>${result.n}</sub>:</strong> ${result.an} &nbsp;|&nbsp; 
+            <strong>S<sub>${result.n}</sub>:</strong> ${result.sn}
+        `;
+
+        // Render Graph
+        const ctx = document.getElementById('apChart').getContext('2d');
+        if (apChartInstance) { apChartInstance.destroy(); }
+
+        apChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: result.labels,
+                datasets: [{
+                    label: 'Progression Value',
+                    data: result.progression,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#1a1a1a',
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: { responsive: true }
+        });
+    }
+</script>
 
 </body>
 </html>
