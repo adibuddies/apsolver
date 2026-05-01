@@ -3,30 +3,56 @@ from flask import Flask, request, jsonify, render_template
 app = Flask(__name__, template_folder=".")
 
 def solve_ap(data):
-    # Extract basic variables
-    a = float(data['a']) if data.get('a') else None
-    d = float(data['d']) if data.get('d') else None
-    n = int(data['n']) if data.get('n') else None
-    an = float(data['an']) if data.get('an') else None
-    sn = float(data['sn']) if data.get('sn') else None
+    mode = data.get('mode', 'basic')
 
-    # ARCHETYPE 1, 2, 3 Logic
-    if a is not None and d is not None and n is not None:
+    if mode == 'basic':
+        a = float(data['a']) if data.get('a') else None
+        d = float(data['d']) if data.get('d') else None
+        n = int(data['n']) if data.get('n') else None
+        an = float(data['an']) if data.get('an') else None
+        sn = float(data['sn']) if data.get('sn') else None
+
+        if a is not None and d is not None and n is not None:
+            an = a + (n - 1) * d
+            sn = (n / 2) * (2 * a + (n - 1) * d)
+        elif a is not None and d is not None and an is not None:
+            n_calc = ((an - a) / d) + 1
+            if n_calc <= 0 or not n_calc.is_integer():
+                return {"error": "These values do not form a valid AP."}
+            n = int(n_calc)
+            sn = (n / 2) * (a + an)
+        elif a is not None and n is not None and sn is not None:
+            d = (sn - (n * a)) * 2 / (n * (n - 1))
+            an = a + (n - 1) * d
+        else:
+            return {"error": "Please provide at least 3 values (e.g., a, d, n)."}
+
+    elif mode == 'two_terms':
+        # --- ARCHETYPE 2: Systems of Equations ---
+        try:
+            n1 = int(data['n1'])
+            v1 = float(data['v1'])
+            n2 = int(data['n2'])
+            v2 = float(data['v2'])
+        except (ValueError, TypeError):
+            return {"error": "Please fill out all 4 fields for the two terms."}
+
+        if n1 == n2:
+            return {"error": "Positions (n1 and n2) must be different."}
+
+        # Simultaneous Equation Logic: d = (v1 - v2) / (n1 - n2)
+        d = (v1 - v2) / (n1 - n2)
+        
+        # Substitute d back into the first equation to find 'a'
+        # v1 = a + (n1 - 1)d  =>  a = v1 - (n1 - 1)d
+        a = v1 - (n1 - 1) * d
+
+        # Check if the user wants to find a specific target term/sum
+        n = int(data['target_n']) if data.get('target_n') else 10 # Default to 10 for graphing
         an = a + (n - 1) * d
         sn = (n / 2) * (2 * a + (n - 1) * d)
-    elif a is not None and d is not None and an is not None:
-        n_calc = ((an - a) / d) + 1
-        if n_calc <= 0 or not n_calc.is_integer():
-            return {"error": "These values do not form a valid AP."}
-        n = int(n_calc)
-        sn = (n / 2) * (a + an)
-    elif a is not None and n is not None and sn is not None:
-        d = (sn - (n * a)) * 2 / (n * (n - 1))
-        an = a + (n - 1) * d
-    else:
-        return {"error": "Please provide at least 3 values (e.g., a, d, n)."}
 
-    # Generate progression array for the frontend graph
+    # Generate the progression for the graph
     progression = [a + i * d for i in range(n)]
     labels = [f"Term {i+1}" for i in range(n)]
 
