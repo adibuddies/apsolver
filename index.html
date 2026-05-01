@@ -95,8 +95,11 @@
             data.an = document.getElementById('val_an').value;
             data.sn = document.getElementById('val_sn').value;
         } else if (mode === 'two_terms') {
-            // We will add the logic to send these to Python in the next commit!
-            alert("Systems of Equations backend logic coming in the next commit!");
+            data.n1 = document.getElementById('val_n1').value;
+            data.v1 = document.getElementById('val_v1').value;
+            data.n2 = document.getElementById('val_n2').value;
+            data.v2 = document.getElementById('val_v2').value;
+            data.target_n = document.getElementById('val_target_n').value;
             return;
         }
 
